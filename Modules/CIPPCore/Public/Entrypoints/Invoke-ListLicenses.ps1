@@ -29,7 +29,6 @@ Function Invoke-ListLicenses {
         $Table = Get-CIPPTable -TableName cachelicenses
         $Rows = Get-CIPPAzDataTableEntity @Table | Where-Object -Property Timestamp -GT (Get-Date).AddHours(-1)
         if (!$Rows) {
-            #Push-OutputBinding -Name LicenseQueue -Value (Get-Date).ToString()
             $GraphRequest = [PSCustomObject]@{
                 Tenant  = 'Loading data for all tenants. Please check back in 1 minute'
                 License = 'Loading data for all tenants. Please check back in 1 minute'
@@ -49,9 +48,13 @@ Function Invoke-ListLicenses {
                 Write-Host "Started permissions orchestration with ID = '$InstanceId'"
             }
         } else {
-            $GraphRequest = $Rows | ForEach-Object {
-                $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
-                $_.TermInfo = $TermInfo
+            $GraphRequest = $Rows | Where-Object { $_.License } | ForEach-Object {
+                if ($_.TermInfo) {
+                    $TermInfo = $_.TermInfo | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    $_.TermInfo = $TermInfo
+                } else {
+                    $_ | Add-Member -NotePropertyName TermInfo -NotePropertyValue $null
+                }
                 $_
             }
         }
